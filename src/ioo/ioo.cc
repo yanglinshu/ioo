@@ -51,22 +51,8 @@ fn ioo::from_string(String& src) {
 }
 
 fn ioo::from_i64(i64 src) {
-    std::cout << src << std::endl;
-    if (src < 0) {
-        self->sign = true;
-        src = -src;
-    }
-    if (src != 0) {
-        while (src > ITEM_MAX * 10) {
-            self->buf.push_back(src % (ITEM_MAX * 10));
-            src /= ITEM_MAX * 10;
-        }
-        if (src != 0) {
-            self->buf.push_back(src);
-        }
-    } else {
-        self->buf.push_back(0);
-    }
+    String src_string = std::to_string(src);
+    self->from_string(src_string);
 }
 
 fn ioo::trim() {
@@ -118,6 +104,24 @@ fn ioo::to_string() -> String {
     return ret;
 }
 
+fn ioo::to_i64() -> i64 {
+    if (*self > LLONG_MAX || *self < LLONG_MIN) {
+        panic_("Unable to convert ioo to i64");
+    }
+    mut i64 result = 0;
+    mut i64 base = 1;
+    if (self->sign) {
+        base = -1;
+    } else {
+        base = 1;
+    }
+    for (mut usize i = 0; i < self->buf.size(); i += 1) {
+        result += self->buf[i] * base;
+        base *= ITEM_MAX * 10;        
+    }
+    return result;
+}
+
 
 
 
@@ -152,7 +156,7 @@ fn ioo::operator==(Self&& other) -> bool {
     return *self == other;
 }
 
-fn ioo::operator==(mut i64 other) -> bool {
+fn ioo::operator==(i64 other) -> bool {
     return *self == ioo(other);
 }
 
@@ -164,7 +168,7 @@ fn ioo::operator!=(Self&& other) -> bool {
     return *self != other;
 }
 
-fn ioo::operator!=(mut i64 other) -> bool {
+fn ioo::operator!=(i64 other) -> bool {
     return *self != ioo(other);
 }
 
@@ -195,7 +199,7 @@ fn ioo::operator<(Self&& other) -> bool {
     return *self < other;
 }
 
-fn ioo::operator<(mut i64 other) -> bool {
+fn ioo::operator<(i64 other) -> bool {
     return *self < ioo(other);
 }
 
@@ -207,7 +211,7 @@ fn ioo::operator<=(Self&& other) -> bool {
     return *self <= other;
 }
 
-fn ioo::operator<=(mut i64 other) -> bool {
+fn ioo::operator<=(i64 other) -> bool {
     return *self <= ioo(other);
 }
 
@@ -219,7 +223,7 @@ fn ioo::operator>(Self&& other) -> bool {
     return *self > other;
 }
 
-fn ioo::operator>(mut i64 other) -> bool {
+fn ioo::operator>(i64 other) -> bool {
     return *self > ioo(other);
 }
 
@@ -231,7 +235,7 @@ fn ioo::operator>=(Self&& other) -> bool {
     return *self >= other;
 }
 
-fn ioo::operator>=(mut i64 other) -> bool {
+fn ioo::operator>=(i64 other) -> bool {
     return *self >= ioo(other);
 }
 

@@ -27,11 +27,11 @@ class ioo {
     pub ioo(mut Self &&other);
     pub ioo(String& src);
     pub ioo(String&& src);
-    pub ioo(mut i64 src);
+    pub ioo(i64 src);
 
     
     pub fn to_string() -> String;
-
+    pub fn to_i64() -> i64;
 
     static fn from(String& src) -> Self;
     static fn from(String&& src) -> Self;
@@ -39,22 +39,22 @@ class ioo {
 
     fn operator==(Self& other) -> bool;
     fn operator==(Self&& other) -> bool;
-    fn operator==(mut i64 other) -> bool;
+    fn operator==(i64 other) -> bool;
     fn operator!=(Self& other) -> bool;
     fn operator!=(Self&& other) -> bool;
-    fn operator!=(mut i64 other) -> bool;
+    fn operator!=(i64 other) -> bool;
     fn operator<(Self& other) -> bool;
     fn operator<(Self&& other) -> bool;
-    fn operator<(mut i64 other) -> bool;
+    fn operator<(i64 other) -> bool;
     fn operator<=(Self& other) -> bool;
     fn operator<=(Self&& other) -> bool;
-    fn operator<=(mut i64 other) -> bool;
+    fn operator<=(i64 other) -> bool;
     fn operator>(Self& other) -> bool;
     fn operator>(Self&& other) -> bool;
-    fn operator>(mut i64 other) -> bool;
+    fn operator>(i64 other) -> bool;
     fn operator>=(Self& other) -> bool;
     fn operator>=(Self&& other) -> bool;
-    fn operator>=(mut i64 other) -> bool;
+    fn operator>=(i64 other) -> bool;
 
     fn operator-() -> Self;
     fn operator!() -> bool;
