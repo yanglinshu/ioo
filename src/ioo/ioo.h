@@ -19,7 +19,7 @@ class ioo {
     bool      sign;
 
     fn from_string(String& src);
-    fn from_i64(i64 src);
+    fn from_i64(mut i64 src);
     fn trim();
 
     pub ioo();
@@ -27,7 +27,7 @@ class ioo {
     pub ioo(mut Self &&other);
     pub ioo(String& src);
     pub ioo(String&& src);
-    pub ioo(i64 src);
+    pub ioo(mut i64 src);
 
     
     pub fn to_string() -> String;
@@ -35,32 +35,32 @@ class ioo {
 
     static fn from(String& src) -> Self;
     static fn from(String&& src) -> Self;
-    static fn from(i64 src) -> Self;
+    static fn from(mut i64 src) -> Self;
 
     fn operator==(Self& other) -> bool;
     fn operator==(Self&& other) -> bool;
-    fn operator==(i64 other) -> bool;
+    fn operator==(mut i64 other) -> bool;
     fn operator!=(Self& other) -> bool;
     fn operator!=(Self&& other) -> bool;
-    fn operator!=(i64 other) -> bool;
+    fn operator!=(mut i64 other) -> bool;
     fn operator<(Self& other) -> bool;
     fn operator<(Self&& other) -> bool;
-    fn operator<(i64 other) -> bool;
+    fn operator<(mut i64 other) -> bool;
     fn operator<=(Self& other) -> bool;
     fn operator<=(Self&& other) -> bool;
-    fn operator<=(i64 other) -> bool;
+    fn operator<=(mut i64 other) -> bool;
     fn operator>(Self& other) -> bool;
     fn operator>(Self&& other) -> bool;
-    fn operator>(i64 other) -> bool;
+    fn operator>(mut i64 other) -> bool;
     fn operator>=(Self& other) -> bool;
     fn operator>=(Self&& other) -> bool;
-    fn operator>=(i64 other) -> bool;
+    fn operator>=(mut i64 other) -> bool;
 
     fn operator-() -> Self;
     fn operator!() -> bool;
 
-    friend fn operator<<(std::ostream& os, ioo &dst) -> std::ostream&;
-    friend fn operator<<(std::ostream& os, ioo &&dst) -> std::ostream&;
+    friend fn operator<<(std::ostream& os, ioo &src) -> std::ostream&;
+    friend fn operator<<(std::ostream& os, ioo &&src) -> std::ostream&;
 
 };
 

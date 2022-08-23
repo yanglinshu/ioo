@@ -31,28 +31,37 @@ fn ioo::from_string(String& src) {
         }
     }
 
-    mut usize buf_size = ceil(len - start);
-    if (buf_size > 0) {
-        // self->buf.reserve(buf_size);
-        mut i32 item = 0;
-        for (mut usize i = 0; i < len - start; i += 1) {
-            item += (src[len - 1 - i] - '0') * TEN_BASES[i % ITEM_LENGTH];
-            if ((i + 1) % ITEM_LENGTH == 0) {
-                self->buf.push_back(item);
-                item = 0;
-            }
-        }
-        if (item != 0) {
+    mut i32 item = 0;
+    for (mut usize i = 0; i < len - start; i += 1) {
+        item += (src[len - 1 - i] - '0') * TEN_BASES[i % ITEM_LENGTH];
+        if ((i + 1) % ITEM_LENGTH == 0) {
             self->buf.push_back(item);
+            item = 0;
         }
-    } else {
+    }
+    if (item != 0) {
+        self->buf.push_back(item);
+    }
+    if (self->buf.empty()) {
         self->buf.push_back(0);
     }
 }
 
-fn ioo::from_i64(i64 src) {
-    String src_string = std::to_string(src);
-    self->from_string(src_string);
+fn ioo::from_i64(mut i64 src) {
+    if (src < 0) {
+        self->sign = true;
+    } 
+    while (src != 0) {
+        if (src < 0) {
+            self->buf.push_back(-(src % (ITEM_MAX * 10)));
+        } else {
+            self->buf.push_back(src % (ITEM_MAX * 10));
+        }
+        src /= ITEM_MAX * 10;
+    }
+    if (self->buf.empty()) {
+        self->buf.push_back(0);
+    }
 }
 
 fn ioo::trim() {
@@ -133,7 +142,7 @@ fn ioo::from(String&& src) -> Self {
     return ioo::from(src);
 }
 
-fn ioo::from(i64 src) -> Self {
+fn ioo::from(mut i64 src) -> Self {
     return ioo(src);
 }
 
@@ -156,7 +165,7 @@ fn ioo::operator==(Self&& other) -> bool {
     return *self == other;
 }
 
-fn ioo::operator==(i64 other) -> bool {
+fn ioo::operator==(mut i64 other) -> bool {
     return *self == ioo(other);
 }
 
@@ -168,7 +177,7 @@ fn ioo::operator!=(Self&& other) -> bool {
     return *self != other;
 }
 
-fn ioo::operator!=(i64 other) -> bool {
+fn ioo::operator!=(mut i64 other) -> bool {
     return *self != ioo(other);
 }
 
@@ -199,7 +208,7 @@ fn ioo::operator<(Self&& other) -> bool {
     return *self < other;
 }
 
-fn ioo::operator<(i64 other) -> bool {
+fn ioo::operator<(mut i64 other) -> bool {
     return *self < ioo(other);
 }
 
@@ -211,7 +220,7 @@ fn ioo::operator<=(Self&& other) -> bool {
     return *self <= other;
 }
 
-fn ioo::operator<=(i64 other) -> bool {
+fn ioo::operator<=(mut i64 other) -> bool {
     return *self <= ioo(other);
 }
 
@@ -223,7 +232,7 @@ fn ioo::operator>(Self&& other) -> bool {
     return *self > other;
 }
 
-fn ioo::operator>(i64 other) -> bool {
+fn ioo::operator>(mut i64 other) -> bool {
     return *self > ioo(other);
 }
 
@@ -235,7 +244,7 @@ fn ioo::operator>=(Self&& other) -> bool {
     return *self >= other;
 }
 
-fn ioo::operator>=(i64 other) -> bool {
+fn ioo::operator>=(mut i64 other) -> bool {
     return *self >= ioo(other);
 }
 
@@ -252,11 +261,11 @@ fn ioo::operator!() -> bool {
 
 
 
-fn operator<<(mut std::ostream& os, ioo& dst) -> std::ostream& {
-    os << dst.to_string();
+fn operator<<(mut std::ostream& os, ioo& src) -> std::ostream& {
+    os << src.to_string();
     return os;
 }
 
-fn operator<<(mut std::ostream& os, ioo&& dst) -> std::ostream& {
-    return os << dst;
+fn operator<<(mut std::ostream& os, ioo&& src) -> std::ostream& {
+    return os << src;
 }
