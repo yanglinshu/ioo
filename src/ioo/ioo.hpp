@@ -27,9 +27,12 @@ class ioo {
     fn from_string(String& src) {
         mut usize len = src.size();
 
-        if (len == 0) {
-            panic_("Unable to convert empty string to ioo");
-        }
+        assert(len != 0);
+        // if (len == 0) {
+        //     panic_("Unable to convert empty string to ioo");
+        // }
+
+        assert(src[0] == '-' || ('0' <= src[0] && src[0] <= '9'));
 
         mut usize start = 0;
         if (src[0] == '-') {
@@ -37,15 +40,16 @@ class ioo {
             start = 1;
         } else if ('0' <= src[0] && src[0] <= '9') {
             self->sign = false;
-        } else {
-            panic_("Unable to convert string to ioo");
-        }
+        } // else {
+        //     panic_("Unable to convert string to ioo");
+        // }
 
         bool marked = false;
         for (mut usize i = start; i < len; i += 1) {
-            if (src[i] < '0' || src[i] > '9') {
-                panic_("Unable to convert string to ioo");
-            }
+            assert(('0' <= src[i] && src[i] <= '9'));
+            // if (src[i] < '0' || src[i] > '9') {
+            //     panic_("Unable to convert string to ioo");
+            // }
             if ('0' < src[i] && (!marked)) {
                 start = i;
                 marked = true;
@@ -139,9 +143,10 @@ class ioo {
     }
 
     pub fn to_i64() -> i64 {
-        if (*self > LLONG_MAX || *self < LLONG_MIN) {
-            panic_("Unable to convert ioo to i64");
-        }
+        assert(*self <= LLONG_MAX && *self >= LLONG_MIN);
+        // if (*self > LLONG_MAX || *self < LLONG_MIN) {
+        //     panic_("Unable to convert ioo to i64");
+        // }
         mut i64 result = 0;
         mut i64 base = 1;
         if (self->sign) {

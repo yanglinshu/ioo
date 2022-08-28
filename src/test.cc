@@ -1,5 +1,9 @@
 #include <vector>
 #include <string>
+#include <limits.h>
+#include <math.h>
+#include <iostream>
+#include <assert.h>
 
 #define Vec    std::vector
 #define String std::string
@@ -33,10 +37,6 @@
 #define bool bool
 
 #define char unsigned char
-
-
-#include <iostream>
-#include <assert.h>
 
 
 template<usize length = 8>
@@ -474,5 +474,10 @@ const typename ioo<length>::Item ioo<length>::ITEM_MAX = ioo<length>::ITEM_BASES
 
 
 int main() {
-
+    String buf = "";
+    std::cin >> buf;
+    ioo a = ioo(buf);
+    std::cin >> buf;
+    ioo b = ioo(buf);
+    std::cout << a + b << std::endl;
 }
