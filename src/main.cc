@@ -1,8 +1,11 @@
-#include "ioo.h"
+#include "ioo.hpp"
+#include "rustio.hpp"
 
 int main() {
-    ioo x = ioo_(123456);
+    ioo x = ioo_(10000000000002);
+    
     ioo y = ioo(LLONG_MIN);
-    std::cout << x << std::endl;
+    ioo z = ioo(-1111111111113);
+    std::cout << x + z << std::endl;    
     return 0;
 }

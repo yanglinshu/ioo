@@ -13,6 +13,8 @@
 #define pub  public:
 #define priv private:
 #define self this
+#define unsafe
+
 #define panic_(x) throw
 
 #define i8  signed char

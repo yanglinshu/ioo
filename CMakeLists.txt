@@ -14,7 +14,7 @@ add_library(
   rust
   STATIC
   src/rust/rustdef.h
-  src/rust/rustio.h
+  src/rust/rustio.hpp
   src/rust/rustio.cc
 )
 
@@ -27,8 +27,8 @@ target_include_directories(
 add_library(
   ioo
   STATIC
-  src/ioo/ioo.h
-  src/ioo/ioo.cc
+  src/ioo/ioo.hpp
+  src/ioo/utils.cc
   src/ioo/utils.h
 )
 
