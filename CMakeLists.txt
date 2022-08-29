@@ -29,7 +29,7 @@ add_library(
   STATIC
   src/ioo/ioo.hpp
   src/ioo/utils.cc
-  src/ioo/utils.h
+  src/ioo/utils.hpp
 )
 
 target_include_directories(

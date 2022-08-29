@@ -1,11 +1,10 @@
 #include "ioo.hpp"
-#include "rustio.hpp"
+
 
 int main() {
-    ioo x = ioo_(10000000000002);
-    
-    ioo y = ioo(LLONG_MIN);
-    ioo z = ioo(1111111111113);
-    std::cout << (-x + z).to_i64() << std::endl;    
-    return 0;
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+    ioo<1> x, y;
+    std::cin >> x >> y;
+    std::cout << x.qmul(y) << std::endl;
 }

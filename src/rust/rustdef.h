@@ -3,9 +3,16 @@
 
 #include <vector>
 #include <string>
+#include <tuple>
 
-#define Vec    std::vector
+#define Vec       std::vector
+#define vec_(...) std::vector({__VA_ARGS__})
+
 #define String std::string
+
+#define Tuple(...)  std::tuple<__VA_ARGS__>
+#define tuple_(...) std::make_tuple(__VA_ARGS__)
+#define let auto
 
 #define mut
 #define ref  &
@@ -15,7 +22,7 @@
 #define self this
 #define unsafe
 
-#define panic_(x) throw
+#define panic_(x) throw(x)
 
 #define i8  signed char
 #define i16 short

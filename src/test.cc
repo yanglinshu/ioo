@@ -60,9 +60,8 @@ class ioo {
     fn from_string(String& src) {
         mut usize len = src.size();
 
-        if (len == 0) {
-            panic_("Unable to convert empty string to ioo");
-        }
+        assert(len != 0);
+        assert(src[0] == '-' || ('0' <= src[0] && src[0] <= '9'));
 
         mut usize start = 0;
         if (src[0] == '-') {
@@ -70,15 +69,12 @@ class ioo {
             start = 1;
         } else if ('0' <= src[0] && src[0] <= '9') {
             self->sign = false;
-        } else {
-            panic_("Unable to convert string to ioo");
         }
 
         bool marked = false;
         for (mut usize i = start; i < len; i += 1) {
-            if (src[i] < '0' || src[i] > '9') {
-                panic_("Unable to convert string to ioo");
-            }
+            assert(('0' <= src[i] && src[i] <= '9'));
+
             if ('0' < src[i] && (!marked)) {
                 start = i;
                 marked = true;
@@ -121,10 +117,10 @@ class ioo {
     fn trim() {
         while (self->buf.size() > 1 && self->buf[self->buf.size() - 1] == 0) {
             self->buf.pop_back();
-        }
+        }       
         if (*self == 0 && self->sign) {
             self->sign = false;
-        }
+        }  
     }
 
 
@@ -157,24 +153,23 @@ class ioo {
 
     
     pub fn to_string() -> String {
-        mut String ret = "";
+        mut String result = "";
         if (self->sign) {
-            ret += "-";
+            result += "-";
         }
         for (mut usize i = 0; i < self->buf.size(); i += 1) {
             mut String item = std::to_string(self->buf[self->buf.size() - 1 - i]);
             if (i != 0) {
                 item = String(ITEM_LENGTH - item.size(), '0') + item;
             }
-            ret += item;
+            result += item;
         }
-        return ret;
+        return result;
     }
 
     pub fn to_i64() -> i64 {
-        if (*self > LLONG_MAX || *self < LLONG_MIN) {
-            panic_("Unable to convert ioo to i64");
-        }
+        assert(*self <= LLONG_MAX && *self >= LLONG_MIN);
+
         mut i64 result = 0;
         mut i64 base = 1;
         if (self->sign) {
@@ -394,6 +389,21 @@ class ioo {
         return *self + ioo(other);
     }
 
+    fn operator+=(Self& other) -> Self {
+        *self = *self + other;
+        return *self;
+    }
+
+    fn operator+=(Self&& other) -> Self {
+        *self += other;
+        return *self;
+    }
+
+    fn operator+=(mut i64 other) -> Self {
+        *self += ioo(other);
+        return *self;
+    }
+
     fn operator-(Self& other) -> Self {
         if (self->sign == other.sign) {
             if (self->sign) {
@@ -441,6 +451,44 @@ class ioo {
         return *self - ioo(other);
     }
 
+    fn operator-=(Self& other) -> Self {
+        *self = *self - other;
+        return *self;
+    }
+
+    fn operator-=(Self&& other) -> Self {
+        *self -= other;
+        return *self;
+    }
+
+    fn operator-=(mut i64 other) -> Self {
+        *self -= ioo(other);
+        return *self;
+    }
+
+    fn operator*(Self& other) -> Self {
+        mut Self result = Self();
+        result.sign = self->sign ^ other.sign;
+        result.buf.pop_back();
+        result.buf.assign(self->buf.size() + other.buf.size(), 0);
+        for (mut usize i = 0; i < self->buf.size(); i += 1) {
+            for (mut usize j = 0; j < other.buf.size(); j += 1) {                
+                u64 product = (u64)self->buf[i] * (u64)other.buf[j];
+                result.buf[i + j] += product % ITEM_MAX;                       
+                result.buf[i + j + 1] += product / ITEM_MAX;
+                for (mut usize k = i + j; k < result.buf.size() - 1; k += 1) {
+                    if (result.buf[k] >= ITEM_MAX) {
+                        result.buf[k + 1] += result.buf[k] / ITEM_MAX;
+                        result.buf[k] %= ITEM_MAX;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        result.trim();
+        return result;
+    }
 
 
 
@@ -456,6 +504,8 @@ class ioo {
 
 };
 
+
+
 template<usize length>
 const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
     Vec<Item> bases;
@@ -468,16 +518,31 @@ const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
 })();
 
 template<usize length>
-const typename ioo<length>::Item ioo<length>::ITEM_MAX = ioo<length>::ITEM_BASES[length];
+const typename ioo<length>::Item ioo<length>::ITEM_MAX = ([]() {
+    usize n = length;
+    Item base = 10;
+    Item result = 1;
+    while (n > 0) {
+        if (n & 1) {
+            result *= base;
+        }
+        base *= base;
+        n >>= 1;
+    }
+    return result;
+})();
+
 
 #define ioo_(x) ioo(#x)
 
 
 int main() {
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
     String buf = "";
     std::cin >> buf;
     ioo a = ioo(buf);
     std::cin >> buf;
     ioo b = ioo(buf);
-    std::cout << a + b << std::endl;
+    std::cout << a * b << std::endl;
 }

@@ -3,8 +3,10 @@
 
 #include <iostream>
 #include <assert.h>
+
 #include "rustdef.h"
-#include "utils.h"
+#include "utils.hpp"
+
 
 template<usize length = 8>
 class ioo {
@@ -12,7 +14,7 @@ class ioo {
     static_assert(length > 0, "length must be greater than 0");
     static_assert(length < 10, "length must be less than 64");
 
-    using Item = u32;
+    using Item = u64;
     using Self = ioo;    
     
     static const usize     ITEM_LENGTH = length;    
@@ -28,10 +30,6 @@ class ioo {
         mut usize len = src.size();
 
         assert(len != 0);
-        // if (len == 0) {
-        //     panic_("Unable to convert empty string to ioo");
-        // }
-
         assert(src[0] == '-' || ('0' <= src[0] && src[0] <= '9'));
 
         mut usize start = 0;
@@ -40,16 +38,12 @@ class ioo {
             start = 1;
         } else if ('0' <= src[0] && src[0] <= '9') {
             self->sign = false;
-        } // else {
-        //     panic_("Unable to convert string to ioo");
-        // }
+        }
 
         bool marked = false;
         for (mut usize i = start; i < len; i += 1) {
             assert(('0' <= src[i] && src[i] <= '9'));
-            // if (src[i] < '0' || src[i] > '9') {
-            //     panic_("Unable to convert string to ioo");
-            // }
+
             if ('0' < src[i] && (!marked)) {
                 start = i;
                 marked = true;
@@ -92,10 +86,175 @@ class ioo {
     fn trim() {
         while (self->buf.size() > 1 && self->buf[self->buf.size() - 1] == 0) {
             self->buf.pop_back();
-        }
+        }       
         if (*self == 0 && self->sign) {
             self->sign = false;
+        }  
+    }
+
+
+
+
+
+
+    fn eq(Self& other) -> bool {
+        if (self->sign != other.sign || self->buf.size() != other.buf.size()) {
+            return false;
         }
+        for (mut usize i = 0; i < self->buf.size(); i += 1) {
+            if (self->buf[i] != other.buf[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    fn ne(Self& other) -> bool {
+        return !self->eq(other);
+    }
+
+    fn lt(Self& other) -> bool {
+        if (self->sign != other.sign) {
+            return self->sign;
+        }
+        if (self->buf.size() != other.buf.size()) {
+            if (self->sign) {
+                return self->buf.size() > other.buf.size();
+            } else {
+                return self->buf.size() < other.buf.size();
+            }
+        }
+        for (mut usize i = 0; i < self->buf.size(); i += 1) {
+            usize index = self->buf.size() - 1 - i;
+            if (self->buf[index] != other.buf[index]) {
+                if (self->sign) {
+                    return self->buf[index] > other.buf[index];
+                } else {
+                    return self->buf[index] < other.buf[index];
+                }
+            }
+        }
+        return false;
+    }
+
+    fn le(Self& other) -> bool {
+        return *self == other || *self < other;
+    }
+
+    fn gt(Self& other) -> bool {
+        return !self->le(other);
+    }
+
+    fn ge(Self& other) -> bool {
+        return !self->lt(other);
+    }
+
+    fn neg() -> Self {
+        mut Self result = *self;
+        result.sign = !result.sign;
+        return result;
+    }
+
+    fn not() -> bool {
+        return *self == 0;
+    }
+
+    fn add(Self& other) -> Self {
+        if (self->sign == other.sign) {
+            mut Self result = Self();
+            result.sign = self->sign;
+            result.buf.pop_back();
+            mut i64 carry = 0;
+            for (mut usize i = 0; i < std::max(self->buf.size(), other.buf.size()); i += 1) {
+                mut i64 sum = carry;
+                if (i < self->buf.size()) {
+                    sum += self->buf[i];
+                }
+                if (i < other.buf.size()) {
+                    sum += other.buf[i];
+                }
+                result.buf.push_back(sum % ITEM_MAX);
+                carry = sum / ITEM_MAX;
+            }
+            if (carry != 0) {
+                result.buf.push_back(carry);
+            }
+            result.trim();
+            return result;
+        } else {
+            if (self->sign) {
+                return other - (-*self);
+            } else {
+                return *self - (-other);
+            }
+        }        
+    }
+
+    fn sub(Self& other) -> Self {
+        if (self->sign == other.sign) {
+            if (self->sign) {
+                return -((-*self) - (-other));
+            } else if (*self < other) {
+                return -(other - *self);            
+            } else {
+                mut Self result = Self();
+                result.sign = self->sign;
+                result.buf.pop_back();
+                mut i64 borrow = 0;
+                for (mut usize i = 0; i < std::max(self->buf.size(), other.buf.size()); i += 1) {
+                    mut i64 diff = borrow;
+                    if (i < self->buf.size()) {
+                        diff += self->buf[i];
+                    }
+                    if (i < other.buf.size()) {
+                        diff -= other.buf[i];
+                    }
+                    if (diff < 0) {
+                        borrow = -ceil((-diff) / (ITEM_MAX * 1.0));
+                        diff += ITEM_MAX * (-borrow);
+                    } else {
+                        borrow = 0;
+                    }
+                    result.buf.push_back(diff);
+                }
+                result.trim();
+                return result;
+            }
+        } else {
+            if (self->sign) {
+                return -((-*self) + other);
+            } else {
+                return *self + (-other);
+            }
+        }        
+    }
+
+    fn mul(Self& other) -> Self {
+        mut Self result = Self();
+        result.sign = self->sign ^ other.sign;
+        result.buf.pop_back();
+        result.buf.assign(self->buf.size() + other.buf.size(), 0);
+        for (mut usize i = 0; i < self->buf.size(); i += 1) {
+            for (mut usize j = 0; j < other.buf.size(); j += 1) {                
+                u64 product = (u64)self->buf[i] * (u64)other.buf[j];
+                result.buf[i + j] += product % ITEM_MAX;                       
+                result.buf[i + j + 1] += product / ITEM_MAX;
+                for (mut usize k = i + j; k < result.buf.size() - 1; k += 1) {
+                    if (result.buf[k] >= ITEM_MAX) {
+                        result.buf[k + 1] += result.buf[k] / ITEM_MAX;
+                        result.buf[k] %= ITEM_MAX;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        result.trim();
+        return result;
+    }
+
+    fn div(Self& other) -> Tuple(Self, Self) {
+
     }
 
 
@@ -128,25 +287,23 @@ class ioo {
 
     
     pub fn to_string() -> String {
-        mut String ret = "";
+        mut String result = "";
         if (self->sign) {
-            ret += "-";
+            result += "-";
         }
         for (mut usize i = 0; i < self->buf.size(); i += 1) {
             mut String item = std::to_string(self->buf[self->buf.size() - 1 - i]);
             if (i != 0) {
                 item = String(ITEM_LENGTH - item.size(), '0') + item;
             }
-            ret += item;
+            result += item;
         }
-        return ret;
+        return result;
     }
 
     pub fn to_i64() -> i64 {
         assert(*self <= LLONG_MAX && *self >= LLONG_MIN);
-        // if (*self > LLONG_MAX || *self < LLONG_MIN) {
-        //     panic_("Unable to convert ioo to i64");
-        // }
+
         mut i64 result = 0;
         mut i64 base = 1;
         if (self->sign) {
@@ -160,6 +317,25 @@ class ioo {
         }
         return result;
     }
+
+    // pub fn qmul(Self& other) -> Self {
+    //     mut Self result = Self();
+    //     result.sign = self->sign ^ other.sign;
+    //     result.buf.pop_back();
+    //     result.buf = FFT::mul(self->buf, other.buf);
+    //     mut u64 carry = 0;
+    //     for (mut usize i = 0; i < result.buf.size(); i += 1) {
+    //         result.buf[i] += carry;
+    //         carry = result.buf[i] / ITEM_MAX;
+    //         result.buf[i] %= ITEM_MAX;
+    //     }
+    //     while (carry != 0) {
+    //         result.buf.push_back(carry % ITEM_MAX);
+    //         carry /= ITEM_MAX;
+    //     }
+    //     result.trim();
+    //     return result;
+    // }
 
 
 
@@ -207,15 +383,7 @@ class ioo {
 
 
     fn operator==(Self& other) -> bool {
-        if (self->sign != other.sign || self->buf.size() != other.buf.size()) {
-            return false;
-        }
-        for (mut usize i = 0; i < self->buf.size(); i += 1) {
-            if (self->buf[i] != other.buf[i]) {
-                return false;
-            }
-        }
-        return true;
+        return self->eq(other);
     }
 
     fn operator==(Self&& other) -> bool {
@@ -227,7 +395,7 @@ class ioo {
     }
 
     fn operator!=(Self& other) -> bool {
-        return !(*self == other);
+        return self->ne(other);
     }
 
     fn operator!=(Self&& other) -> bool {
@@ -239,27 +407,7 @@ class ioo {
     }
 
     fn operator<(Self& other) -> bool {
-        if (self->sign != other.sign) {
-            return self->sign;
-        }
-        if (self->buf.size() != other.buf.size()) {
-            if (self->sign) {
-                return self->buf.size() > other.buf.size();
-            } else {
-                return self->buf.size() < other.buf.size();
-            }
-        }
-        for (mut usize i = 0; i < self->buf.size(); i += 1) {
-            usize index = self->buf.size() - 1 - i;
-            if (self->buf[index] != other.buf[index]) {
-                if (self->sign) {
-                    return self->buf[index] > other.buf[index];
-                } else {
-                    return self->buf[index] < other.buf[index];
-                }
-            }
-        }
-        return false;
+        return self->lt(other);
     }
 
     fn operator<(Self&& other) -> bool {
@@ -271,7 +419,7 @@ class ioo {
     }
 
     fn operator<=(Self& other) -> bool {
-        return *self == other || *self < other;
+        return self->le(other);
     }
 
     fn operator<=(Self&& other) -> bool {
@@ -283,7 +431,7 @@ class ioo {
     }
 
     fn operator>(Self& other) -> bool {
-        return !(*self <= other);
+        return self->gt(other);
     }
 
     fn operator>(Self&& other) -> bool {
@@ -295,7 +443,7 @@ class ioo {
     }
 
     fn operator>=(Self& other) -> bool {
-        return !(*self < other);
+        return self->ge(other);
     }
 
     fn operator>=(Self&& other) -> bool {
@@ -313,13 +461,11 @@ class ioo {
 
 
     fn operator-() -> Self {
-        mut Self result = *self;
-        result.sign = !result.sign;
-        return result;
+        return self->neg();
     }
 
     fn operator!() -> bool {
-        return *self == 0;
+        return self->not();
     }
 
 
@@ -328,34 +474,7 @@ class ioo {
 
 
     fn operator+(Self& other) -> Self {
-        if (self->sign == other.sign) {
-            mut Self result = Self();
-            result.sign = self->sign;
-            result.buf.pop_back();
-            mut i64 carry = 0;
-            for (mut usize i = 0; i < std::max(self->buf.size(), other.buf.size()); i += 1) {
-                mut i64 sum = carry;
-                if (i < self->buf.size()) {
-                    sum += self->buf[i];
-                }
-                if (i < other.buf.size()) {
-                    sum += other.buf[i];
-                }
-                result.buf.push_back(sum % ITEM_MAX);
-                carry = sum / ITEM_MAX;
-            }
-            if (carry != 0) {
-                result.buf.push_back(carry);
-            }
-            result.trim();
-            return result;
-        } else {
-            if (self->sign) {
-                return other - (-*self);
-            } else {
-                return *self - (-other);
-            }
-        }
+        return self->add(other);
     }
 
     fn operator+(Self&& other) -> Self {
@@ -366,43 +485,23 @@ class ioo {
         return *self + ioo(other);
     }
 
+    fn operator+=(Self& other) -> Self {
+        *self = *self + other;
+        return *self;
+    }
+
+    fn operator+=(Self&& other) -> Self {
+        *self += other;
+        return *self;
+    }
+
+    fn operator+=(mut i64 other) -> Self {
+        *self += ioo(other);
+        return *self;
+    }
+
     fn operator-(Self& other) -> Self {
-        if (self->sign == other.sign) {
-            if (self->sign) {
-                return -((-*self) - (-other));
-            } else if (*self < other) {
-                return -(other - *self);            
-            } else {
-                mut Self result = Self();
-                result.sign = self->sign;
-                result.buf.pop_back();
-                mut i64 borrow = 0;
-                for (mut usize i = 0; i < std::max(self->buf.size(), other.buf.size()); i += 1) {
-                    mut i64 diff = borrow;
-                    if (i < self->buf.size()) {
-                        diff += self->buf[i];
-                    }
-                    if (i < other.buf.size()) {
-                        diff -= other.buf[i];
-                    }
-                    if (diff < 0) {
-                        borrow = -ceil((-diff) / (ITEM_MAX * 1.0));
-                        diff += ITEM_MAX * (-borrow);
-                    } else {
-                        borrow = 0;
-                    }
-                    result.buf.push_back(diff);
-                }
-                result.trim();
-                return result;
-            }
-        } else {
-            if (self->sign) {
-                return -((-*self) + other);
-            } else {
-                return *self + (-other);
-            }
-        }
+        return self->sub(other);
     }
 
     fn operator-(Self&& other) -> Self {
@@ -411,6 +510,25 @@ class ioo {
 
     fn operator-(mut i64 other) -> Self {
         return *self - ioo(other);
+    }
+
+    fn operator-=(Self& other) -> Self {
+        *self = *self - other;
+        return *self;
+    }
+
+    fn operator-=(Self&& other) -> Self {
+        *self -= other;
+        return *self;
+    }
+
+    fn operator-=(mut i64 other) -> Self {
+        *self -= ioo(other);
+        return *self;
+    }
+
+    fn operator*(Self& other) -> Self {
+        return self->mul(other);
     }
 
 
@@ -426,7 +544,17 @@ class ioo {
         return os << src;
     }
 
+    friend fn operator>>(std::istream& is, ioo &src) -> std::istream& {
+        mut String buf = "";
+        src.buf.clear();
+        is >> buf;
+        src = ioo(buf);
+        return is;
+    }
+
 };
+
+
 
 template<usize length>
 const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
@@ -440,7 +568,20 @@ const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
 })();
 
 template<usize length>
-const typename ioo<length>::Item ioo<length>::ITEM_MAX = ioo<length>::ITEM_BASES[length];
+const typename ioo<length>::Item ioo<length>::ITEM_MAX = ([]() {
+    usize n = length;
+    Item base = 10;
+    Item result = 1;
+    while (n > 0) {
+        if (n & 1) {
+            result *= base;
+        }
+        base *= base;
+        n >>= 1;
+    }
+    return result;
+})();
+
 
 #define ioo_(x) ioo(#x)
 
