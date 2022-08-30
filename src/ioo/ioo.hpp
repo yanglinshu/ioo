@@ -8,13 +8,16 @@
 #include "utils.hpp"
 
 
-template<usize length = 8>
+template<usize length = 8, 
+        bool enable_fft = false, 
+        typename buf_T = u64>
 class ioo {
 
     static_assert(length > 0, "length must be greater than 0");
     static_assert(length < 9, "length must be less than 64");
+    static_assert(std::is_integral<buf_T>::value, "buf_T must be integral");
 
-    using Item = u64;
+    using Item = buf_T;
     using Self = ioo;    
     
     static const usize     ITEM_LENGTH = length;    
@@ -91,6 +94,27 @@ class ioo {
             self->sign = false;
         }  
     }
+
+    // ![Unstable] This may cause overflow when the number is too big.
+    fn fft_mul(Self& other) -> Self {
+        mut Self result = Self();
+        result.sign = self->sign ^ other.sign;
+        result.buf.pop_back();
+        result.buf = FFT<Item>::mul(self->buf, other.buf);
+        mut u64 carry = 0;
+        for (mut usize i = 0; i < result.buf.size(); i += 1) {
+            result.buf[i] += carry;
+            carry = result.buf[i] / ITEM_MAX;
+            result.buf[i] %= ITEM_MAX;
+        }
+        while (carry != 0) {
+            result.buf.push_back(carry % ITEM_MAX);
+            carry /= ITEM_MAX;
+        }
+        result.trim();
+        return result;
+    }
+
 
 
 
@@ -318,28 +342,6 @@ class ioo {
         return result;
     }
 
-    pub fn qmul(Self& other) -> Self {
-        // ![Unstable] This may cause overflow when the number is too big.
-
-        mut Self result = Self();
-        result.sign = self->sign ^ other.sign;
-        result.buf.pop_back();
-        result.buf = FFT<Item>::mul(self->buf, other.buf);
-        mut u64 carry = 0;
-        for (mut usize i = 0; i < result.buf.size(); i += 1) {
-            result.buf[i] += carry;
-            carry = result.buf[i] / ITEM_MAX;
-            result.buf[i] %= ITEM_MAX;
-        }
-        while (carry != 0) {
-            result.buf.push_back(carry % ITEM_MAX);
-            carry /= ITEM_MAX;
-        }
-        result.trim();
-        return result;
-    }
-
-
 
 
 
@@ -530,7 +532,35 @@ class ioo {
     }
 
     fn operator*(Self& other) -> Self {
-        return self->_mul(other);
+        if (enable_fft) {
+            #pragma message("FFT multiplication is unstable.")
+            return self->fft_mul(other);
+        } else {
+            return self->_mul(other);
+        }
+    }
+
+    fn operator*(Self&& other) -> Self {
+        return *self * other;
+    }
+
+    fn operator*(mut i64 other) -> Self {
+        return *self * ioo(other);
+    }
+
+    fn operator*=(Self& other) -> Self {
+        *self = *self * other;
+        return *self;
+    }
+
+    fn operator*=(Self&& other) -> Self {
+        *self *= other;
+        return *self;
+    }
+
+    fn operator*=(mut i64 other) -> Self {
+        *self *= ioo(other);
+        return *self;
     }
 
 
@@ -558,8 +588,9 @@ class ioo {
 
 
 
-template<usize length>
-const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
+template<usize length, bool enable_fft, typename buf_T>
+const Vec<typename ioo<length, enable_fft, buf_T>::Item> 
+ioo<length, enable_fft, buf_T>::ITEM_BASES = ([]() {
     Vec<Item> bases;
     Item base = 1;
     for (usize i = 0; i <= length; i++) {
@@ -569,8 +600,9 @@ const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
     return bases;
 })();
 
-template<usize length>
-const typename ioo<length>::Item ioo<length>::ITEM_MAX = ([]() {
+template<usize length, bool enable_fft, typename buf_T>
+const typename ioo<length, enable_fft, buf_T>::Item 
+ioo<length, enable_fft, buf_T>::ITEM_MAX = ([]() {
     usize n = length;
     Item base = 10;
     Item result = 1;
