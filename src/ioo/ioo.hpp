@@ -12,7 +12,7 @@ template<usize length = 8>
 class ioo {
 
     static_assert(length > 0, "length must be greater than 0");
-    static_assert(length < 10, "length must be less than 64");
+    static_assert(length < 9, "length must be less than 64");
 
     using Item = u64;
     using Self = ioo;    
@@ -97,7 +97,7 @@ class ioo {
 
 
 
-    fn eq(Self& other) -> bool {
+    fn _eq(Self& other) -> bool {
         if (self->sign != other.sign || self->buf.size() != other.buf.size()) {
             return false;
         }
@@ -109,11 +109,11 @@ class ioo {
         return true;
     }
 
-    fn ne(Self& other) -> bool {
-        return !self->eq(other);
+    fn _ne(Self& other) -> bool {
+        return !self->_eq(other);
     }
 
-    fn lt(Self& other) -> bool {
+    fn _lt(Self& other) -> bool {
         if (self->sign != other.sign) {
             return self->sign;
         }
@@ -137,29 +137,29 @@ class ioo {
         return false;
     }
 
-    fn le(Self& other) -> bool {
+    fn _le(Self& other) -> bool {
         return *self == other || *self < other;
     }
 
-    fn gt(Self& other) -> bool {
-        return !self->le(other);
+    fn _gt(Self& other) -> bool {
+        return !self->_le(other);
     }
 
-    fn ge(Self& other) -> bool {
-        return !self->lt(other);
+    fn _ge(Self& other) -> bool {
+        return !self->_lt(other);
     }
 
-    fn neg() -> Self {
+    fn _neg() -> Self {
         mut Self result = *self;
         result.sign = !result.sign;
         return result;
     }
 
-    fn not() -> bool {
+    fn _not() -> bool {
         return *self == 0;
     }
 
-    fn add(Self& other) -> Self {
+    fn _add(Self& other) -> Self {
         if (self->sign == other.sign) {
             mut Self result = Self();
             result.sign = self->sign;
@@ -190,7 +190,7 @@ class ioo {
         }        
     }
 
-    fn sub(Self& other) -> Self {
+    fn _sub(Self& other) -> Self {
         if (self->sign == other.sign) {
             if (self->sign) {
                 return -((-*self) - (-other));
@@ -229,7 +229,7 @@ class ioo {
         }        
     }
 
-    fn mul(Self& other) -> Self {
+    fn _mul(Self& other) -> Self {
         mut Self result = Self();
         result.sign = self->sign ^ other.sign;
         result.buf.pop_back();
@@ -253,7 +253,7 @@ class ioo {
         return result;
     }
 
-    fn div(Self& other) -> Tuple(Self, Self) {
+    fn _div(Self& other) -> Tuple(Self, Self) {
 
     }
 
@@ -313,29 +313,31 @@ class ioo {
         }
         for (mut usize i = 0; i < self->buf.size(); i += 1) {
             result += self->buf[i] * base;
-            base *= ITEM_MAX;        
+            base *= ITEM_MAX;  
         }
         return result;
     }
 
-    // pub fn qmul(Self& other) -> Self {
-    //     mut Self result = Self();
-    //     result.sign = self->sign ^ other.sign;
-    //     result.buf.pop_back();
-    //     result.buf = FFT::mul(self->buf, other.buf);
-    //     mut u64 carry = 0;
-    //     for (mut usize i = 0; i < result.buf.size(); i += 1) {
-    //         result.buf[i] += carry;
-    //         carry = result.buf[i] / ITEM_MAX;
-    //         result.buf[i] %= ITEM_MAX;
-    //     }
-    //     while (carry != 0) {
-    //         result.buf.push_back(carry % ITEM_MAX);
-    //         carry /= ITEM_MAX;
-    //     }
-    //     result.trim();
-    //     return result;
-    // }
+    pub fn qmul(Self& other) -> Self {
+        // ![Unstable] This may cause overflow when the number is too big.
+
+        mut Self result = Self();
+        result.sign = self->sign ^ other.sign;
+        result.buf.pop_back();
+        result.buf = FFT<Item>::mul(self->buf, other.buf);
+        mut u64 carry = 0;
+        for (mut usize i = 0; i < result.buf.size(); i += 1) {
+            result.buf[i] += carry;
+            carry = result.buf[i] / ITEM_MAX;
+            result.buf[i] %= ITEM_MAX;
+        }
+        while (carry != 0) {
+            result.buf.push_back(carry % ITEM_MAX);
+            carry /= ITEM_MAX;
+        }
+        result.trim();
+        return result;
+    }
 
 
 
@@ -383,7 +385,7 @@ class ioo {
 
 
     fn operator==(Self& other) -> bool {
-        return self->eq(other);
+        return self->_eq(other);
     }
 
     fn operator==(Self&& other) -> bool {
@@ -395,7 +397,7 @@ class ioo {
     }
 
     fn operator!=(Self& other) -> bool {
-        return self->ne(other);
+        return self->_ne(other);
     }
 
     fn operator!=(Self&& other) -> bool {
@@ -407,7 +409,7 @@ class ioo {
     }
 
     fn operator<(Self& other) -> bool {
-        return self->lt(other);
+        return self->_lt(other);
     }
 
     fn operator<(Self&& other) -> bool {
@@ -419,7 +421,7 @@ class ioo {
     }
 
     fn operator<=(Self& other) -> bool {
-        return self->le(other);
+        return self->_le(other);
     }
 
     fn operator<=(Self&& other) -> bool {
@@ -431,7 +433,7 @@ class ioo {
     }
 
     fn operator>(Self& other) -> bool {
-        return self->gt(other);
+        return self->_gt(other);
     }
 
     fn operator>(Self&& other) -> bool {
@@ -443,7 +445,7 @@ class ioo {
     }
 
     fn operator>=(Self& other) -> bool {
-        return self->ge(other);
+        return self->_ge(other);
     }
 
     fn operator>=(Self&& other) -> bool {
@@ -461,11 +463,11 @@ class ioo {
 
 
     fn operator-() -> Self {
-        return self->neg();
+        return self->_neg();
     }
 
     fn operator!() -> bool {
-        return self->not();
+        return self->_not();
     }
 
 
@@ -474,7 +476,7 @@ class ioo {
 
 
     fn operator+(Self& other) -> Self {
-        return self->add(other);
+        return self->_add(other);
     }
 
     fn operator+(Self&& other) -> Self {
@@ -501,7 +503,7 @@ class ioo {
     }
 
     fn operator-(Self& other) -> Self {
-        return self->sub(other);
+        return self->_sub(other);
     }
 
     fn operator-(Self&& other) -> Self {
@@ -528,7 +530,7 @@ class ioo {
     }
 
     fn operator*(Self& other) -> Self {
-        return self->mul(other);
+        return self->_mul(other);
     }
 
 
@@ -584,5 +586,23 @@ const typename ioo<length>::Item ioo<length>::ITEM_MAX = ([]() {
 
 
 #define ioo_(x) ioo(#x)
+
+#define ioo1 ioo<1>
+#define ioo2 ioo<2>
+#define ioo3 ioo<3>
+#define ioo4 ioo<4>
+#define ioo5 ioo<5>
+#define ioo6 ioo<6>
+#define ioo7 ioo<7>
+#define ioo8 ioo<8>
+
+#define ioo1_(x) ioo1(#x)
+#define ioo2_(x) ioo2(#x)
+#define ioo3_(x) ioo3(#x)
+#define ioo4_(x) ioo4(#x)
+#define ioo5_(x) ioo5(#x)
+#define ioo6_(x) ioo6(#x)
+#define ioo7_(x) ioo7(#x)
+#define ioo8_(x) ioo8(#x)
 
 #endif

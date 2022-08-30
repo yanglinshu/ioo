@@ -4,17 +4,20 @@
 #include <complex>
 #include <math.h>
 #include <iostream>
+#include <type_traits>
 
 #include "rustdef.h"
 
-// !FIX: remake this fft.
+template<typename T>
 struct FFT {
+
+    static_assert(std::is_integral<T>::value, "T must be integral");
 
     static const f64 PI;
     using Item = std::complex<f64>;
-    using Poly = Vec<u64>;
+    using Poly = Vec<T>;
 
-    static fn init_rev(usize n) -> Tuple(usize, Vec<usize>) {
+    static fn init_rev(usize n) -> Vec<usize> {
         usize limit = 1;
         usize bits = 0;
         while (limit < n) {
@@ -27,7 +30,7 @@ struct FFT {
         for (usize i = 0; i < limit; i += 1) {
             rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (bits - 1));
         }
-        return tuple_(limit, rev);
+        return rev;
     }
 
     static fn to_complex(Poly& src) -> Vec<Item> {
@@ -40,7 +43,7 @@ struct FFT {
 
     static fn _fft(Vec<Item>& src, Vec<usize> rev, usize limit, i32 opt) -> Vec<Item> {
         mut Vec<Item> result = src;
-        result.resize(limit, Item(0, 0));
+        result.resize(limit + 1, Item(0, 0));
         for (usize i = 0; i < limit; i += 1) {
             if (i < rev[i]) {
                 std::swap(result[i], result[rev[i]]);
@@ -61,9 +64,6 @@ struct FFT {
                 }
             }
         }
-
-
-
         return result;
     }
 
@@ -72,28 +72,29 @@ struct FFT {
     }
 
     static fn fft(Poly& src) -> Vec<Item> {
-        let [_, rev] = init_rev(src.size());
+        let rev = init_rev(src.size());
         return _fft(to_complex(src), rev, rev.size(), 1);
     }
 
     static fn ifft(Poly& src) -> Vec<Item> {
-        let [_, rev] = init_rev(src.size());     
+        let rev = init_rev(src.size());     
         return _fft(to_complex(src), rev, rev.size(), -1);
     }
 
     static fn mul(Poly& lhs, Poly& rhs) -> Poly {
-        let [_, rev] = init_rev(lhs.size() + rhs.size());
-        mut Vec<Item> lhs_fft = _fft(to_complex(lhs), rev, rev.size(), 1);
-        mut Vec<Item> rhs_fft = _fft(to_complex(rhs), rev, rev.size(), 1);
-        for (usize i = 0; i < rev.size(); i += 1) {
+        let rev = init_rev(lhs.size() + rhs.size() - 1);
+        let limit = rev.size();
+        mut Vec<Item> lhs_fft = _fft(to_complex(lhs), rev, limit, 1);
+        mut Vec<Item> rhs_fft = _fft(to_complex(rhs), rev, limit, 1);
+        for (usize i = 0; i < limit + 1; i += 1) {
             lhs_fft[i] = lhs_fft[i] * rhs_fft[i];
         }
 
-        Vec<Item> lhs_ifft = _fft(lhs_fft, rev, rev.size(), -1);        
+        Vec<Item> lhs_ifft = _fft(lhs_fft, rev, limit, -1);        
         mut Poly result;
         result.assign(lhs_ifft.size(), 0);
-        for (usize i = 0; i < rev.size(); i += 1) {
-            result[i] = lhs_ifft[i].real() / rev.size() + 0.5;
+        for (usize i = 0; i < lhs.size() + rhs.size() - 1; i += 1) {
+            result[i] = lhs_ifft[i].real() / limit + 0.5;
         }
 
         return result;
@@ -101,6 +102,7 @@ struct FFT {
 
 };
 
-const f64 FFT::PI = acos(-1);
+template<typename T>
+const f64 FFT<T>::PI = acos(-1);
 
 #endif
