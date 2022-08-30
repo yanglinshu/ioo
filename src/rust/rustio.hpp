@@ -3,6 +3,8 @@
 
 #include "rustdef.h"
 
+// ![Unfinished] Not available yet.
+
 template<typename... T>
 fn print(T... args) -> void {
     (_print(args), ...);
