@@ -1,4 +1,4 @@
-# IOO | A C++ Implementation of High Accuracy Algorithm
+# IOO - A C++ Implementation of High Accuracy Algorithm
 
 IOO, meaning i-infinity (like i32),  is a C++ implementation of high accuracy algorithm, providing support to basic arithmetic operations. Some rust style macros are added for convenience, which can be removed easily with the help of your compiler.
 

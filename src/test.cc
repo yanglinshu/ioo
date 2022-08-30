@@ -144,13 +144,33 @@ struct FFT {
 template<typename T>
 const f64 FFT<T>::PI = acos(-1);
 
-template<usize length = 8>
+namespace utils {
+
+    template<typename T>
+    fn pow(T base, usize exp) -> T {
+        T result = 1;
+        while (exp > 0) {
+            if (exp & 1) {
+                result *= base;
+            }
+            base *= base;
+            exp >>= 1;
+        }
+        return result;
+    }
+
+}
+
+template<usize length = 8, 
+        bool enable_fft = false, 
+        typename buf_T = u64>
 class ioo {
 
     static_assert(length > 0, "length must be greater than 0");
     static_assert(length < 9, "length must be less than 64");
+    static_assert(std::is_unsigned<buf_T>::value, "buf_T must be unsigned integral");
 
-    using Item = u64;
+    using Item = buf_T;
     using Self = ioo;    
     
     static const usize     ITEM_LENGTH = length;    
@@ -163,6 +183,8 @@ class ioo {
     bool      sign;
 
     fn from_string(String& src) {
+        self->buf.clear();
+
         mut usize len = src.size();
 
         assert(len != 0);
@@ -203,6 +225,8 @@ class ioo {
     }
 
     fn from_i64(mut i64 src) {
+        self->buf.clear();
+
         if (src < 0) {
             self->sign = true;
         } 
@@ -227,6 +251,35 @@ class ioo {
             self->sign = false;
         }  
     }
+
+    fn forward(usize start) {
+        mut u64 carry = 0;
+        for (mut usize i = start; i < self->buf.size(); i += 1) {
+            self->buf[i] += carry;
+            carry = self->buf[i] / ITEM_MAX;
+            self->buf[i] %= ITEM_MAX;
+        }
+        while (carry != 0) {
+            self->buf.push_back(carry % ITEM_MAX);
+            carry /= ITEM_MAX;
+        }
+    }
+
+    fn forward() {
+        forward(0);
+    }
+
+    // ![Unstable] This may cause overflow when the number is too big.
+    fn fft_mul(Self& other) -> Self {
+        mut Self result = Self();
+        result.sign = self->sign ^ other.sign;
+        result.buf.pop_back();
+        result.buf = FFT<Item>::mul(self->buf, other.buf);
+        result.forward();
+        result.trim();
+        return result;
+    }
+
 
 
 
@@ -390,7 +443,56 @@ class ioo {
     }
 
     fn _div(Self& other) -> Tuple(Self, Self) {
+        if (self->sign == other.sign) {
+            if (self->sign) {
+                let [quotient, remainder] = (-*self)._div(other);
+                return tuple_(quotient, -remainder);
+            } else if (*self < other) {
+                return tuple_(0, *self);
+            } else {
+                mut Self quotient = Self();
+                mut Self remainder = *self;
+                for (mut isize i = self->buf.size() - other.buf.size(); remainder >= other; i -= 1) {
+                    Self base = utils::pow(Self(ITEM_MAX), i);
+                    Self padding = other * base;
+                    usize low = 0;
+                    usize high = ITEM_MAX;
+                    while (low < high) {
+                        usize mid = (low + high) / 2;
+                        Self guess = padding * mid;
+                        if (guess < remainder) {
+                            if (guess + padding == remainder) {
+                                low = mid + 1;
+                                break;
+                            } else if (guess + padding > remainder) {
+                                low = mid;
+                                break;
+                            } else {
+                                low = mid + 1;
+                            }
+                        } else {
+                            high = mid;
+                        }
+                    }
+                    quotient += base * low;
+                    remainder -= padding * low;
+                    // std::cout << remainder << " " << quotient << std::endl;
+                } 
+                return tuple_(quotient, remainder);
+            }
+        } else {
+            if (self->sign) {
+                let [quotient, remainder] = (-*self)._div(other);
+                return tuple_(-quotient, -remainder);
+            } else {
+                let [quotient, remainder] = (*self)._div(-other);
+                return tuple_(-quotient, remainder);
+            }
+        }
+    }
 
+    fn _div(Self&& other) -> Tuple(Self, Self) {
+        return self->_div(other);
     }
 
 
@@ -454,28 +556,6 @@ class ioo {
         return result;
     }
 
-    pub fn qmul(Self& other) -> Self {
-        // ![Unstable] This may cause overflow when the number is too big.
-
-        mut Self result = Self();
-        result.sign = self->sign ^ other.sign;
-        result.buf.pop_back();
-        result.buf = FFT<Item>::mul(self->buf, other.buf);
-        mut u64 carry = 0;
-        for (mut usize i = 0; i < result.buf.size(); i += 1) {
-            result.buf[i] += carry;
-            carry = result.buf[i] / ITEM_MAX;
-            result.buf[i] %= ITEM_MAX;
-        }
-        while (carry != 0) {
-            result.buf.push_back(carry % ITEM_MAX);
-            carry /= ITEM_MAX;
-        }
-        result.trim();
-        return result;
-    }
-
-
 
 
 
@@ -513,6 +593,11 @@ class ioo {
     
     fn operator=(mut Self&& other) -> Self {
         *self = other;
+        return *self;
+    }
+
+    fn operator=(i64 src) -> Self {
+        self->from_i64(src);
         return *self;
     }
 
@@ -666,8 +751,186 @@ class ioo {
     }
 
     fn operator*(Self& other) -> Self {
-        return self->_mul(other);
+        if constexpr (enable_fft) {
+            return self->fft_mul(other);
+        } else {
+            return self->_mul(other);
+        }
     }
+
+    fn operator*(Self&& other) -> Self {
+        return *self * other;
+    }
+
+    fn operator*(mut i64 other) -> Self {
+        return *self * ioo(other);
+    }
+
+    fn operator*=(Self& other) -> Self {
+        *self = *self * other;
+        return *self;
+    }
+
+    fn operator*=(Self&& other) -> Self {
+        *self *= other;
+        return *self;
+    }
+
+    fn operator*=(mut i64 other) -> Self {
+        *self *= ioo(other);
+        return *self;
+    }
+
+    fn operator/(Self& other) -> Self {
+        let [quotient, _] = self->_div(other);
+        return quotient;
+    }
+
+    fn operator/(Self&& other) -> Self {
+        return *self / other;
+    }
+
+    fn operator/(mut i64 other) -> Self {
+        return *self / ioo(other);
+    }
+
+    fn operator/=(Self& other) -> Self {
+        *self = *self / other;
+        return *self;
+    }
+
+    fn operator/=(Self&& other) -> Self {
+        *self /= other;
+        return *self;
+    }
+
+    fn operator/=(mut i64 other) -> Self {
+        *self /= ioo(other);
+        return *self;
+    }
+
+    fn operator%(Self& other) -> Self {
+        let [_, remainder] = self->_div(other);
+        return remainder;
+    }
+
+    fn operator%(Self&& other) -> Self {
+        return *self % other;
+    }
+
+    fn operator%(mut i64 other) -> Self {
+        return *self % ioo(other);
+    }
+
+    fn operator%=(Self& other) -> Self {
+        *self = *self % other;
+        return *self;
+    }
+
+    fn operator%=(Self&& other) -> Self {
+        *self %= other;
+        return *self;
+    }
+
+    fn operator%=(mut i64 other) -> Self {
+        *self %= ioo(other);
+        return *self;
+    }
+
+
+
+
+
+
+    friend fn operator==(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) == rhs;
+    }
+
+    friend fn operator==(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) == rhs;
+    }
+
+    friend fn operator!=(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) != rhs;
+    }
+
+    friend fn operator!=(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) != rhs;
+    }
+
+    friend fn operator<(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) < rhs;
+    }
+
+    friend fn operator<(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) < rhs;
+    }
+
+    friend fn operator<=(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) <= rhs;
+    }
+
+    friend fn operator<=(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) <= rhs;
+    }
+
+    friend fn operator>(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) > rhs;
+    }
+
+    friend fn operator>(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) > rhs;
+    }
+
+    friend fn operator>=(i64 lhs, Self& rhs) -> bool {
+        return ioo(lhs) >= rhs;
+    }
+
+    friend fn operator>=(i64 lhs, Self&& rhs) -> bool {
+        return ioo(lhs) >= rhs;
+    }
+
+    friend fn operator+(i64 lhs, Self& rhs) -> Self {
+        return ioo(lhs) + rhs;
+    }
+
+    friend fn operator+(i64 lhs, Self&& rhs) -> Self {
+        return ioo(lhs) + rhs;
+    }
+
+    friend fn operator-(i64 lhs, Self& rhs) -> Self {
+        return ioo(lhs) - rhs;
+    }
+
+    friend fn operator-(i64 lhs, Self&& rhs) -> Self {
+        return ioo(lhs) - rhs;
+    }
+
+    friend fn operator*(i64 lhs, Self& rhs) -> Self {
+        return ioo(lhs) * rhs;
+    }
+
+    friend fn operator*(i64 lhs, Self&& rhs) -> Self {
+        return ioo(lhs) * rhs;
+    }
+
+    friend fn operator/(i64 lhs, Self& rhs) -> Self {
+        return ioo(lhs) / rhs;
+    }
+
+    friend fn operator/(i64 lhs, Self&& rhs) -> Self {
+        return ioo(lhs) / rhs;
+    }
+
+    friend fn operator%(i64 lhs, Self& rhs) -> Self {
+        return ioo(lhs) % rhs;
+    }
+
+    friend fn operator%(i64 lhs, Self&& rhs) -> Self {
+        return ioo(lhs) % rhs;
+    }
+    
+
 
 
 
@@ -694,8 +957,9 @@ class ioo {
 
 
 
-template<usize length>
-const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
+template<usize length, bool enable_fft, typename buf_T>
+const Vec<typename ioo<length, enable_fft, buf_T>::Item> 
+ioo<length, enable_fft, buf_T>::ITEM_BASES = ([]() {
     Vec<Item> bases;
     Item base = 1;
     for (usize i = 0; i <= length; i++) {
@@ -705,20 +969,9 @@ const Vec<typename ioo<length>::Item> ioo<length>::ITEM_BASES = ([]() {
     return bases;
 })();
 
-template<usize length>
-const typename ioo<length>::Item ioo<length>::ITEM_MAX = ([]() {
-    usize n = length;
-    Item base = 10;
-    Item result = 1;
-    while (n > 0) {
-        if (n & 1) {
-            result *= base;
-        }
-        base *= base;
-        n >>= 1;
-    }
-    return result;
-})();
+template<usize length, bool enable_fft, typename buf_T>
+const typename ioo<length, enable_fft, buf_T>::Item 
+ioo<length, enable_fft, buf_T>::ITEM_MAX = utils::pow<typename ioo<length, enable_fft, buf_T>::Item>(10, length);
 
 
 #define ioo_(x) ioo(#x)
@@ -748,7 +1001,7 @@ int main() {
     // freopen("output.txt", "w", stdout);
     // ioo1 x = ioo1_(1234512345123456);
     // ioo1 y = ioo1_(6543265432654321);
-    ioo2 x, y;
+    ioo x, y;
     std::cin >> x >> y;
-    std::cout << x.qmul(y) << std::endl;
+    std::cout << x / y << std::endl;
 }

@@ -34,7 +34,7 @@
 #define u32 unsigned int
 #define u64 unsigned long long
 
-#define isize ptrdiff_t
+#define isize intptr_t
 #define usize size_t
 
 #define f32 float

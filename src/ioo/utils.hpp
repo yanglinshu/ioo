@@ -105,4 +105,21 @@ struct FFT {
 template<typename T>
 const f64 FFT<T>::PI = acos(-1);
 
+namespace utils {
+
+    template<typename T>
+    fn pow(T base, usize exp) -> T {
+        T result = 1;
+        while (exp > 0) {
+            if (exp & 1) {
+                result *= base;
+            }
+            base *= base;
+            exp >>= 1;
+        }
+        return result;
+    }
+
+}
+
 #endif
