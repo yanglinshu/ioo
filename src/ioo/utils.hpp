@@ -1,5 +1,5 @@
-#ifndef __UTILS_H_
-#define __UTILS_H_
+#ifndef __UTILS_HPP_
+#define __UTILS_HPP_
 
 #include <complex>
 #include <math.h>

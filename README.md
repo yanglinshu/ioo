@@ -24,10 +24,11 @@ int main() {
 }
 ```
 
+This work is built for Windows and MSVC is highly recommended.
 
 
 ## License
 
-Licensed under the [MIT License](https://github.com/yanglinshu/ioo/blob/master/LICENSE)
+Licensed under the [GPL License](https://github.com/yanglinshu/ioo/blob/master/LICENSE)
 
 All rights reserved by yanglinshu.
