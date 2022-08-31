@@ -323,7 +323,6 @@ class ioo {
                     }
                     quotient += base * low;
                     remainder -= padding * low;
-                    // std::cout << remainder << " " << quotient << std::endl;
                 } 
                 return tuple_(quotient, remainder);
             }
@@ -336,10 +335,6 @@ class ioo {
                 return tuple_(-quotient, remainder);
             }
         }
-    }
-
-    fn _div(Self&& other) -> Tuple(Self, Self) {
-        return self->_div(other);
     }
 
 
