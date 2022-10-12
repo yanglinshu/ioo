@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include <stdint.h>
 
 #define Vec       std::vector
 #define vec_(...) std::vector({__VA_ARGS__})
@@ -24,24 +25,20 @@
 
 #define panic_(x) throw(x)
 
-#define i8  signed char
-#define i16 short
-#define i32 int
-#define i64 long long
+typedef uint8_t  u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-#define u8  unsigned char
-#define u16 unsigned short
-#define u32 unsigned int
-#define u64 unsigned long long
+typedef int8_t  i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
 
-#define isize intptr_t
-#define usize size_t
+typedef float  f32;
+typedef double f64;
 
-#define f32 float
-#define f64 double
-
-#define bool bool
-
-#define char unsigned char
+typedef size_t usize;
+typedef ptrdiff_t isize;
 
 #endif
